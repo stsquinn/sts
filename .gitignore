@@ -1,0 +1,6 @@
+/target
+
+# Public repo: local config and env files can hold company values or tokens.
+/config.toml
+.env
+.env.*

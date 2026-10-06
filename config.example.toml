@@ -1,0 +1,18 @@
+# sts config. `sts config init` copies this file to ~/.config/sts/config.toml.
+# Command-line flags and environment variables override these values.
+# Keep secrets out of this file. sts reads tokens from the environment or prompts for them.
+
+[aws]
+# region = "ap-southeast-2"
+# profile = "default"
+
+[github]
+# org = "my-org"
+
+[sonar]
+# host_url = "https://sonar.example.com"
+# image = "sonarsource/sonarqube-scan:3.0.2"
+# engine = "docker"  # or "podman"
+
+[gnome]
+# workspaces = ["Personal", "Project01", "Project02", "Project03"]
