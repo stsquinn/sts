@@ -40,7 +40,7 @@ flowchart LR
 | `sts gh clone-org [ORG]` | `clone-org.sh` | It clones every repository of an organization in parallel. It pulls repositories that are already cloned. |
 | `sts ssm connect` | `connect-ec2-ssm.sh` | It lets you pick an EC2 instance and opens an SSM shell on it. |
 | `sts ssm enable` | `list-ec2-add-ssm.sh` | It attaches `AmazonSSMManagedInstanceCore` to an instance role. This command writes to IAM. |
-| `sts sonar scan [PATH]` | `sonarqube-scan.sh` | It scans a local project with the SonarQube scanner in a container. |
+| `sts sonar scan [PATH]` | `sonarqube-scan.sh` | It asks for the server URL, project path, project key and token, then scans the project with the SonarQube scanner in a container. |
 | `sts gnome workspaces [NAMES]` | `workspace-conf.sh` | It sets the GNOME workspace names. |
 | `sts doctor` | | It checks the required tools and prints install commands for your distro. |
 
@@ -121,6 +121,8 @@ flowchart LR
 | `sonar.image` | `--image` | `SONAR_SCANNER_IMAGE` |
 | `sonar.engine` | `--engine` | |
 | `gnome.workspaces` | `[NAMES]` | |
+
+`sts sonar scan` asks for each value that is not passed as a flag, and the environment and the config file prefill those prompts. Without a terminal, it uses those values directly and requires `--project-key`.
 
 `STS_CONFIG` points `sts` at a different config file. See [config.example.toml](config.example.toml) for every key.
 
