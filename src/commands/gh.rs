@@ -124,8 +124,8 @@ fn clone_org(args: CloneOrgArgs, cfg: &Config) -> Result<()> {
     }
     let jobs = plan(repos, &dest, args.protocol);
     println!(
-        "Found {} repositories. Destination: {}",
-        jobs.len(),
+        "Found {}. Destination: {}",
+        repo_count(jobs.len()),
         dest.display()
     );
 
@@ -159,13 +159,21 @@ fn clone_org(args: CloneOrgArgs, cfg: &Config) -> Result<()> {
     match failed.into_inner() {
         0 => {
             println!(
-                "Done. All {} repositories are in {}",
-                jobs.len(),
+                "Done. All {} are in {}",
+                repo_count(jobs.len()),
                 dest.display()
             );
             Ok(())
         }
-        n => bail!("{n} repositories failed to clone. See the errors above."),
+        n => bail!("{} failed to clone. See the errors above.", repo_count(n)),
+    }
+}
+
+fn repo_count(n: usize) -> String {
+    if n == 1 {
+        "1 repository".to_string()
+    } else {
+        format!("{n} repositories")
     }
 }
 
@@ -247,5 +255,11 @@ mod tests {
             Protocol::Https,
         );
         assert_eq!(https[1].url, "https://github.com/acme/web");
+    }
+
+    #[test]
+    fn counts_repositories_in_singular_and_plural() {
+        assert_eq!(repo_count(1), "1 repository");
+        assert_eq!(repo_count(3), "3 repositories");
     }
 }
