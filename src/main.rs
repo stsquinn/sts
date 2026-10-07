@@ -2,6 +2,7 @@ mod commands;
 mod config;
 mod platform;
 mod run;
+mod state;
 
 use std::process::ExitCode;
 

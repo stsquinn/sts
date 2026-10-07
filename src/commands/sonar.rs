@@ -6,9 +6,9 @@ use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand};
 use dialoguer::{Input, Password};
 
-use crate::config::{self, Config};
+use crate::config::Config;
 use crate::platform::{self, Engine};
-use crate::run;
+use crate::{run, state};
 
 const DEFAULT_IMAGE: &str = "sonarsource/sonarqube-scan:3.0.2";
 
@@ -16,7 +16,7 @@ const DEFAULT_IMAGE: &str = "sonarsource/sonarqube-scan:3.0.2";
 pub enum Command {
     /// Scan a local project with the SonarQube scanner in a container.
     ///
-    /// Asks for every value that is not passed as a flag, prefilled from the environment and the config.
+    /// Asks for every value that is not passed as a flag, prefilled from the environment, the last scan and the config.
     /// The token comes from SONAR_TOKEN or a hidden prompt. It is never a flag, so it stays out of shell history.
     Scan(ScanArgs),
 }
@@ -28,7 +28,8 @@ pub struct ScanArgs {
     /// SonarQube project key [default: the directory name].
     #[arg(short = 'k', long)]
     project_key: Option<String>,
-    /// SonarQube server URL [default: SONAR_HOST_URL, then `sonar.host_url` in the config].
+    /// SonarQube server URL [default: SONAR_HOST_URL, then the last URL used, then `sonar.host_url` in the config].
+    /// Without a terminal, sts neither uses nor saves the last URL.
     #[arg(long)]
     host_url: Option<String>,
     /// Scanner image. Falls back to `sonar.image` in the config.
@@ -49,22 +50,25 @@ fn scan(args: ScanArgs, cfg: &Config) -> Result<()> {
     // Prompts draw on stderr, so both ends must be a terminal.
     let interactive = std::io::stdin().is_terminal() && std::io::stderr().is_terminal();
 
-    let host_default = env_var("SONAR_HOST_URL").or_else(|| cfg.sonar.host_url.clone());
-    let tip = interactive && args.host_url.is_none() && host_default.is_none();
     let host_url = match args.host_url {
         Some(url) => url,
-        None if interactive => ask("SonarQube URL", host_default, check_host_url)?,
-        None => host_default.context(
+        None if interactive => {
+            let prefill = env_var("SONAR_HOST_URL")
+                .or(state::load().sonar.host_url)
+                .or_else(|| cfg.sonar.host_url.clone());
+            ask("SonarQube URL", prefill, check_host_url)?
+        }
+        // The last URL is for people at a prompt; scripts never read or overwrite it.
+        None => env_var("SONAR_HOST_URL")
+            .or_else(|| cfg.sonar.host_url.clone())
+            .context(
             "SonarQube URL is not set: pass --host-url, export SONAR_HOST_URL or set sonar.host_url in the config",
         )?,
     };
     check_host_url(&host_url).map_err(anyhow::Error::msg)?;
     let host_url = host_url.trim_end_matches('/').to_string();
-    if tip {
-        eprintln!(
-            "Tip: set sonar.host_url in {} to prefill this prompt.",
-            config::path().display()
-        );
+    if interactive {
+        state::remember(|s| s.sonar.host_url = Some(host_url.clone()));
     }
     if host_url.starts_with("http://") {
         eprintln!("warning: {host_url} uses plain HTTP, so the token is sent unencrypted.");

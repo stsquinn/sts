@@ -1,10 +1,11 @@
+use std::io::IsTerminal;
 use std::process::Command as Process;
 
 use anyhow::{Result, bail};
 use clap::Subcommand;
-use dialoguer::FuzzySelect;
+use dialoguer::{FuzzySelect, Input};
 
-use crate::{platform, run};
+use crate::{platform, run, state};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -12,25 +13,40 @@ pub enum Command {
     ///
     /// It skips discovery, so it works when a scan cannot find the device.
     /// Put the device in pairing mode first. Pairing runs `sudo btmgmt`.
+    /// sts remembers the address for the next `pair` and `connect`.
     Pair {
-        /// Device address, for example AA:BB:CC:DD:EE:FF.
-        address: String,
+        /// Device address, for example AA:BB:CC:DD:EE:FF. Omit it to be asked, with the last device prefilled.
+        address: Option<String>,
     },
     /// Connect a paired device.
     Connect {
-        /// Device address. Omit it to pick one of the paired devices.
+        /// Device address. Omit it to use the last device, or to pick a paired device when there is none.
         address: Option<String>,
     },
 }
 
 pub fn run(cmd: Command) -> Result<()> {
     platform::require("bluetoothctl")?;
+    let saved = state::load()
+        .bluetooth
+        .device
+        .and_then(|device| parse_address(&device).ok());
     match cmd {
-        Command::Pair { address } => pair(&parse_address(&address)?),
-        Command::Connect { address } => {
+        Command::Pair { address } => {
             let address = match address {
                 Some(address) => parse_address(&address)?,
-                None => match pick()? {
+                None => ask_address(saved)?,
+            };
+            pair(&address)
+        }
+        Command::Connect { address } => {
+            let address = match (address, saved) {
+                (Some(address), _) => parse_address(&address)?,
+                (None, Some(saved)) => {
+                    eprintln!("Using the last device, {saved}.");
+                    saved
+                }
+                (None, None) => match pick()? {
                     Some(address) => address,
                     None => {
                         println!("Cancelled.");
@@ -43,6 +59,20 @@ pub fn run(cmd: Command) -> Result<()> {
     }
 }
 
+fn ask_address(saved: Option<String>) -> Result<String> {
+    // Prompts draw on stderr, so both ends must be a terminal.
+    if !(std::io::stdin().is_terminal() && std::io::stderr().is_terminal()) {
+        bail!("pass ADDRESS when there is no terminal to prompt for it");
+    }
+    let mut input = Input::<String>::new()
+        .with_prompt("Device address")
+        .validate_with(|v: &String| parse_address(v.trim()).map(drop).map_err(|e| e.to_string()));
+    if let Some(saved) = saved {
+        input = input.default(saved);
+    }
+    parse_address(input.interact_text()?.trim())
+}
+
 fn pair(address: &str) -> Result<()> {
     if is_paired(address) {
         println!("{address} is already paired.");
@@ -52,6 +82,7 @@ fn pair(address: &str) -> Result<()> {
         // -c 3 is NoInputNoOutput and -t 0 is BR/EDR, which is what headsets expect.
         run::status(Process::new("sudo").args(["btmgmt", "pair", "-c", "3", "-t", "0", address]))?;
     }
+    remember(address);
     run::status(Process::new("bluetoothctl").args(["trust", address]))?;
     connect(address)
 }
@@ -60,7 +91,13 @@ fn connect(address: &str) -> Result<()> {
     if !is_paired(address) {
         bail!("{address} is not paired. Pair it first with:\n  sts bluetooth pair {address}");
     }
-    run::status(Process::new("bluetoothctl").args(["connect", address]))
+    run::status(Process::new("bluetoothctl").args(["connect", address]))?;
+    remember(address);
+    Ok(())
+}
+
+fn remember(address: &str) {
+    state::remember(|s| s.bluetooth.device = Some(address.to_string()));
 }
 
 /// `bluetoothctl info` fails for unknown devices, which counts as unpaired.
