@@ -29,6 +29,9 @@ enum Command {
     /// GNOME desktop helpers.
     #[command(subcommand)]
     Gnome(commands::gnome::Command),
+    /// Bluetooth helpers.
+    #[command(subcommand, visible_alias = "bt")]
+    Bluetooth(commands::bluetooth::Command),
     /// Check required tools and print install commands for this distro.
     Doctor,
     /// Manage the sts config file.
@@ -63,6 +66,7 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Command::Ssm(cmd) => commands::ssm::run(cmd, &config::load()?),
         Command::Sonar(cmd) => commands::sonar::run(cmd, &config::load()?),
         Command::Gnome(cmd) => commands::gnome::run(cmd, &config::load()?),
+        Command::Bluetooth(cmd) => commands::bluetooth::run(cmd),
         Command::Doctor => commands::doctor::run(),
         Command::Config(cmd) => config::run(cmd),
         Command::Completions { shell } => {

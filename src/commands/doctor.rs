@@ -2,12 +2,14 @@ use anyhow::{Result, bail};
 
 use crate::platform::{self, Distro, Family};
 
-const TOOLS: [(&str, &str); 5] = [
+const TOOLS: [(&str, &str); 7] = [
     ("git", "gh clone-org"),
     ("gh", "gh clone-org"),
     ("aws", "ssm connect, ssm enable"),
     ("session-manager-plugin", "ssm connect"),
     ("gsettings", "gnome workspaces"),
+    ("bluetoothctl", "bluetooth pair, bluetooth connect"),
+    ("btmgmt", "bluetooth pair"),
 ];
 
 pub fn run() -> Result<()> {

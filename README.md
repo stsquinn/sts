@@ -22,9 +22,15 @@ For zsh completion, run `sts completions zsh > ~/.zfunc/_sts` and add `fpath=(~/
 | `sts ssm enable` | It attaches `AmazonSSMManagedInstanceCore` to an instance role. It writes to IAM, so it asks first. |
 | `sts sonar scan [PATH]` | It asks for the server URL, project key and token, then runs the SonarQube scanner in a container. |
 | `sts gnome workspaces [NAMES]` | It sets the GNOME workspace names. |
+| `sts bluetooth pair ADDRESS` | It pairs a device by address, then trusts and connects it. It runs `sudo btmgmt`. |
+| `sts bluetooth connect [ADDRESS]` | It connects a paired device. Without an address, it lets you pick one. |
 | `sts doctor` | It checks the required tools and prints install commands for your distro. |
 
-`sts` calls the official CLIs, such as `gh`, `aws` and `docker`, so it reuses their logins and SSO sessions. Every command has `--help`.
+`sts` calls the official CLIs, such as `gh`, `aws` and `docker`, so it reuses their logins and SSO sessions. Every command has `--help`. `sts bt` is short for `sts bluetooth`.
+
+## Bluetooth
+
+Some headsets never answer the laptop's discovery scan, but they still accept a direct connection. `sts bt pair` pairs by address, so it does not need the scan. Put the device in pairing mode first. The address stays the same, so keep it for the next pairing.
 
 ## Config
 

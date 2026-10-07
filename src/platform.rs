@@ -86,6 +86,8 @@ pub fn install_hint(bin: &str, family: Family) -> Option<String> {
         ("podman", Family::Fedora) => "sudo dnf install podman".to_string(),
         ("gsettings", Family::Debian) => "sudo apt install libglib2.0-bin".to_string(),
         ("gsettings", Family::Fedora) => "sudo dnf install glib2".to_string(),
+        ("bluetoothctl" | "btmgmt", Family::Debian) => "sudo apt install bluez".to_string(),
+        ("bluetoothctl" | "btmgmt", Family::Fedora) => "sudo dnf install bluez".to_string(),
         _ => return None,
     };
     Some(hint)
@@ -210,6 +212,8 @@ mod tests {
             "docker",
             "podman",
             "gsettings",
+            "bluetoothctl",
+            "btmgmt",
         ] {
             let debian = install_hint(bin, Family::Debian).unwrap();
             assert!(debian.contains("apt") || debian.contains("snap"), "{bin}");
